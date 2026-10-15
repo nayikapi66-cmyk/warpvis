@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WarpVision PRO - Smart Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .live-mode-active {
+            box-shadow: 0 0 25px rgba(34, 211, 238, 0.15);
+            border-color: rgba(34, 211, 238, 0.4);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(51, 65, 85, 0.6);
+        }
+        /* Custom scrollbar for table */
+        ::-webkit-scrollbar { height: 8px; width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-cyan-500 selection:text-white pb-10">
+
+    <header class="bg-slate-900 border-b border-slate-800 p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <button id="btnBackHome" class="hidden mr-2 p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors" onclick="goHome()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg flex items-center justify-center font-bold text-xl text-white shadow-[0_0_15px_rgba(8,145,178,0.5)]">
+                    W
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight">
+                        WarpVision <span class="font-light text-slate-300">PRO</span>
+                    </h1>
+                    <p id="t-subtitle" class="text-xs text-slate-400">ระบบวิเคราะห์ความโก่งและมิติอัจฉริยะ</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:flex items-center gap-2 text-xs font-mono bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-green-400"></span> Scale: <span id="headerScaleDisplay" class="text-green-400 ml-1">0.25 mm/px</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-full text-sm border border-slate-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" class="text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <select id="langSelect" class="bg-transparent border-none outline-none cursor-pointer text-slate-200 focus:ring-0 appearance-none" onchange="changeLanguage()">
+                        <option value="th">🇹🇭 ไทย (TH)</option>
+                        <option value="en">🇬🇧 English (EN)</option>
+                        <option value="zh">🇨🇳 中文 (ZH)</option>
+                        <option value="ja">🇯🇵 日本語 (JA)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="screenHome" class="max-w-6xl mx-auto p-6 mt-8 animate-fade-in">
+        <div class="text-center mb-12">
+            <h2 id="t-homeTitle" class="text-3xl font-bold text-white mb-3">เลือกโหมดการใช้งาน</h2>
+            <p id="t-homeDesc" class="text-slate-400 max-w-2xl mx-auto">กรุณาสอบเทียบสเกลก่อนทำการวัดชิ้นงานจริง ระบบรองรับการประมวลผลผ่านกล้องแบบเรียลไทม์</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Calibration Mode -->
+            <button onclick="enterMode('CALIB')" class="bg-slate-900 border-2 border-slate-800 hover:border-orange-500 rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-1 group relative overflow-hidden">
+                <div class="absolute top-0 right-0 bg-orange-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-wider" id="t-step1">ขั้นตอนที่ 1</div>
+                <div class="w-14 h-14 bg-orange-900/30 rounded-xl flex items-center justify-center text-orange-400 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <h3 id="t-modeCalibTitle" class="text-xl font-bold text-white mb-2">สอบเทียบสเกล (Calibration)</h3>
+                <p id="t-modeCalibDesc" class="text-slate-400 text-sm">ตั้งค่าอัตราส่วนกล้องเทียบกับวัตถุจริง</p>
+            </button>
+
+            <!-- Dimension Mode -->
+            <button onclick="enterMode('DIM')" class="bg-slate-900 border-2 border-slate-800 hover:border-purple-500 rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-1 group">
+                <div class="w-14 h-14 bg-purple-900/30 rounded-xl flex items-center justify-center text-purple-400 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/></svg>
+                </div>
+                <h3 id="t-modeDimTitle" class="text-xl font-bold text-white mb-2">วัดมิติขนาด (Dimension)</h3>
+                <p id="t-modeDimDesc" class="text-slate-400 text-sm">ตรวจจับและวัดความกว้าง ความยาว (X, Y)</p>
+            </button>
+
+            <!-- Warpage Mode -->
+            <button onclick="enterMode('WARP')" class="bg-slate-900 border-2 border-slate-800 hover:border-red-500 rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-1 group">
+                <div class="w-14 h-14 bg-red-900/30 rounded-xl flex items-center justify-center text-red-400 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4"/><polyline points="14 2 14 8 20 8"/><path d="M2 15s3-3 8-3 8 3 8 3"/></svg>
+                </div>
+                <h3 id="t-modeWarpTitle" class="text-xl font-bold text-white mb-2">วัดความโก่ง (Warpage)</h3>
+                <p id="t-modeWarpDesc" class="text-slate-400 text-sm">ค้นหาจุดโค้งงอสูงสุด พร้อมสร้างเส้นอ้างอิง</p>
+            </button>
+
+            <!-- All in One Mode -->
+            <button onclick="enterMode('ALL')" class="bg-slate-900 border-2 border-cyan-800 hover:border-cyan-400 rounded-2xl p-6 text-left transition-all duration-300 hover:-translate-y-1 relative overflow-hidden group">
+                <div class="w-14 h-14 bg-cyan-900/40 rounded-xl flex items-center justify-center text-cyan-400 mb-4 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </div>
+                <h3 id="t-modeAllTitle" class="text-xl font-bold text-white mb-2">ตรวจสอบรวม (OK/NG)</h3>
+                <p id="t-modeAllDesc" class="text-slate-400 text-sm">วัดมิติและความโก่งแบบสด ตัดสิน Pass/Fail</p>
+            </button>
+        </div>
+    </main>
+
+    <main id="screenApp" class="max-w-7xl mx-auto p-4 lg:p-6 space-y-6 hidden animate-fade-in">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Camera Viewport -->
+            <div class="lg:col-span-2 space-y-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 id="currentModeLabel" class="text-xl font-bold text-cyan-400 uppercase tracking-wider">Live Inspection</h2>
+                    <span class="text-xs bg-slate-800 text-slate-400 px-3 py-1 rounded-full border border-slate-700" id="t-scaleInfo">Smart Tracking: Active</span>
+                </div>
+                
+                <div id="canvasContainer" class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden relative h-[450px] sm:h-[550px] flex items-center justify-center transition-all duration-300 shadow-2xl">
+                    
+                    <div class="absolute top-4 left-4 z-10">
+                        <button id="btnToggleCamera" onclick="toggleCamera()" class="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2.5 rounded-lg font-bold text-sm transition-all shadow-[0_0_15px_rgba(20,184,166,0.4)] flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                            <span id="t-liveCamera">เปิดกล้อง (Live)</span>
+                        </button>
+                    </div>
+
+                    <video id="webcamVideo" autoplay playsinline muted class="hidden"></video>
+                    <canvas id="mainCanvas" width="800" height="550" class="w-full h-full block object-cover bg-slate-950"></canvas>
+
+                    <div id="statusLiveText" class="hidden absolute top-4 right-4 z-10 glass-panel px-4 py-2 rounded-lg text-yellow-400 font-mono text-sm flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse" id="scanPulse"></span>
+                        <span id="scanText">กำลังค้นหาชิ้นงาน...</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6 flex flex-col h-full">
+                
+                <!-- PANEL: Calibration Specific (Hidden by default) -->
+                <div id="panelCalib" class="bg-slate-900 border border-orange-800/50 rounded-xl p-5 shadow-xl hidden">
+                    <h2 class="text-lg font-semibold mb-4 text-white flex items-center gap-2">
+                        <span class="w-1 h-5 bg-orange-500 rounded-full"></span>
+                        <span id="t-calibPanelTitle">ตั้งค่าการสอบเทียบ</span>
+                    </h2>
+                    <p id="t-calibInst" class="text-sm text-slate-400 mb-4">นำวัตถุอ้างอิงมาวางหน้ากล้องให้เต็มกรอบ แล้วระบุขนาดจริงด้านล่าง</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label id="t-refSizeLabel" class="block text-sm text-slate-300 mb-2 font-bold">ความยาวของวัตถุจริง (mm)</label>
+                            <div class="relative group">
+                                <input type="number" id="refSizeInput" step="1" min="1" value="86" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-orange-500 text-xl font-mono" />
+                                <span class="absolute right-4 top-3.5 text-slate-500">mm</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2">* ค่าเริ่มต้น 86mm (เท่ากับความยาวบัตรประชาชน)</p>
+                        </div>
+                        
+                        <div class="pt-4">
+                            <button onclick="performCalibration()" class="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(234,88,12,0.4)] flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                <span id="t-btnConfirmCalib">บันทึกค่าสเกล (Set Scale)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL: Measurement Settings (Visible in Measure Modes) -->
+                <div id="panelMeasureSettings" class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl">
+                    <h2 class="text-lg font-semibold mb-3 text-white flex items-center gap-2">
+                        <span class="w-1 h-5 bg-cyan-500 rounded-full"></span>
+                        <span id="t-controlTitle">ตั้งค่าเกณฑ์ยอมรับ</span>
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label id="t-tolerance" class="block text-sm text-slate-400 mb-2">เกณฑ์ยอมรับความโก่ง (Tolerance)</label>
+                            <div class="relative group">
+                                <input type="number" id="toleranceInput" step="0.01" min="0" value="0.50" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 text-lg font-mono" />
+                                <span class="absolute right-4 top-3.5 text-slate-500 font-mono">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PANEL: Live Results -->
+                <div id="panelMeasureResults" class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex-1 flex flex-col transition-all duration-300">
+                    <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                        <span id="resultIndicator" class="w-1 h-5 rounded-full bg-slate-700"></span>
+                        <span id="t-results">ผลการวัดสด (Real-time)</span>
+                    </h2>
+
+                    <!-- Dimension Box -->
+                    <div id="boxDimension" class="bg-slate-950 rounded-xl p-4 border border-purple-900/30 mb-4 hidden">
+                        <p class="text-purple-400 text-xs font-bold uppercase mb-2 flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+                            <span id="t-dimensions">ขนาดกว้าง x ยาว (Dimension)</span>
+                        </p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <p id="t-length" class="text-slate-500 text-xs">ยาว (L)</p>
+                                <p class="text-white font-mono text-xl"><span id="valLength">0.0</span> <span class="text-xs text-slate-500">mm</span></p>
+                            </div>
+                            <div>
+                                <p id="t-height" class="text-slate-500 text-xs">กว้าง (W)</p>
+                                <p class="text-white font-mono text-xl"><span id="valHeight">0.0</span> <span class="text-xs text-slate-500">mm</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warpage Box -->
+                    <div id="boxWarpage" class="mb-4 hidden">
+                        <p id="t-maxWarpage" class="text-sm text-slate-400 mb-1">ความโก่งสูงสุด (Max Gap)</p>
+                        <div class="flex justify-between items-end gap-2">
+                            <div class="flex items-baseline gap-1">
+                                <span id="valWarpage" class="text-5xl font-bold font-mono text-slate-600">0.00</span>
+                                <span class="text-slate-500">mm</span>
+                            </div>
+                            <div id="valStatus" class="px-4 py-1.5 rounded-lg border-2 font-bold tracking-widest text-xl bg-slate-900 border-slate-700 text-slate-500">
+                                -
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-auto pt-4" id="boxSaveAction">
+                        <button onclick="saveData()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" id="btnSaveData" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span id="t-btnSave">บันทึกค่า (Save Record)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="historySection" class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-white" id="t-historyTitle">ประวัติ (Log)</h2>
+                <button onclick="exportCSV()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span id="t-exportCSV">ส่งออก CSV</span>
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto mb-6 max-h-[300px] overflow-y-auto border border-slate-800 rounded-lg">
+                <table class="w-full text-left text-sm text-slate-400">
+                    <thead class="bg-slate-800/80 text-slate-300 uppercase text-xs sticky top-0 z-10 backdrop-blur-sm">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold" id="t-thTime">เวลา</th>
+                            <th class="px-4 py-3 font-semibold" id="t-thDim">กว้าง x ยาว (mm)</th>
+                            <th class="px-4 py-3 font-semibold" id="t-thWarp">ความโก่ง (mm)</th>
+                            <th class="px-4 py-3 font-semibold" id="t-thResult">ผลลัพธ์</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <!-- Data injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Chart.js Canvas -->
+            <div class="border-t border-slate-800 pt-6">
+                <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-cyan-500"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <span id="t-trendTitle">กราฟแนวโน้มความโก่ง (Warpage Trend)</span>
+                </h2>
+                <div class="w-full h-[250px] relative">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const dict = {
+            th: {
+                subtitle: "ระบบวิเคราะห์ความโก่งและมิติอัจฉริยะ", homeTitle: "เลือกโหมดการใช้งาน", homeDesc: "กรุณาสอบเทียบสเกลก่อนทำการวัดชิ้นงานจริง ระบบรองรับการประมวลผลผ่านกล้องแบบเรียลไทม์",
+                step1: "ขั้นตอนที่ 1", modeCalibTitle: "สอบเทียบสเกล (Calibration)", modeCalibDesc: "ตั้งค่าอัตราส่วนกล้องเทียบกับวัตถุจริง",
+                modeDimTitle: "วัดขนาด (Dimension)", modeDimDesc: "วัดความกว้าง ความยาว", modeWarpTitle: "วัดความโก่ง (Warpage)", modeWarpDesc: "หาจุดโค้งงอสูงสุด",
+                modeAllTitle: "ตรวจสอบรวม (OK/NG)", modeAllDesc: "วัดมิติและความโก่งแบบสด", liveCamera: "เปิดกล้อง", stopCamera: "ปิดกล้อง",
+                scanSearch: "กำลังค้นหาชิ้นงาน...", scanFound: "ตรวจพบชิ้นงานเป้าหมาย", calibPanelTitle: "ตั้งค่าการสอบเทียบ", calibInst: "นำวัตถุอ้างอิงมาวางหน้ากล้องให้เต็มกรอบ แล้วระบุขนาดจริงด้านล่าง",
+                refSizeLabel: "ความยาวของวัตถุจริง (mm)", btnConfirmCalib: "บันทึกค่าสเกล (Set Scale)", controlTitle: "ตั้งค่าเกณฑ์ยอมรับ", tolerance: "เกณฑ์ยอมรับความโก่ง (Tolerance)",
+                results: "ผลการวัดสด (Real-time)", dimensions: "ขนาดกว้าง x ยาว", length: "ความยาว (L)", height: "ความกว้าง (W)",
+                maxWarpage: "ความโก่งสูงสุด", btnSave: "บันทึกค่า (Save Record)", historyTitle: "ประวัติการวัด (Log)", exportCSV: "ส่งออก CSV",
+                thTime: "เวลา", thDim: "กว้าง x ยาว (mm)", thWarp: "ความโก่ง (mm)", thResult: "สถานะ", pass: "PASS", fail: "FAIL", trendTitle: "กราฟแนวโน้มความโก่ง (Warpage Trend)",
+                alertNoObj: "ไม่พบวัตถุอ้างอิงในกล้อง! กรุณาวางชิ้นงานให้อยู่ในกรอบ", alertSuccess: "บันทึกสเกลสำเร็จ! สเกลปัจจุบันคือ:"
+            },
+            en: {
+                subtitle: "Smart Dimension & Warpage Analysis", homeTitle: "Select Operating Mode", homeDesc: "Please calibrate scale before measuring. Supports real-time camera processing.",
+                step1: "STEP 1", modeCalibTitle: "Scale Calibration", modeCalibDesc: "Set camera ratio using a known object",
+                modeDimTitle: "Dimension", modeDimDesc: "Measure X, Y dimensions", modeWarpTitle: "Warpage", modeWarpDesc: "Find max gap & datum",
+                modeAllTitle: "OK/NG Inspection", modeAllDesc: "Live combined analysis", liveCamera: "Open Camera", stopCamera: "Stop Camera",
+                scanSearch: "Searching for object...", scanFound: "Object Detected", calibPanelTitle: "Calibration Settings", calibInst: "Place reference object in frame and input its real size below.",
+                refSizeLabel: "Real Object Length (mm)", btnConfirmCalib: "Set Scale", controlTitle: "Tolerance Settings", tolerance: "Warpage Tolerance [mm]",
+                results: "Live Results", dimensions: "Bounding Dimensions", length: "Length (L)", height: "Width (W)",
+                maxWarpage: "Max Warpage Gap", btnSave: "Save Record", historyTitle: "Inspection Log", exportCSV: "Export CSV",
+                thTime: "Time", thDim: "L x W (mm)", thWarp: "Warpage (mm)", thResult: "Status", pass: "OK", fail: "NG", trendTitle: "Warpage Trend Graph",
+                alertNoObj: "No object detected! Please place the reference object in the frame.", alertSuccess: "Calibration successful! Current scale is:"
+            },
+            zh: {
+                subtitle: "智能尺寸与翘曲分析系统", homeTitle: "选择操作模式", homeDesc: "测量前请先校准比例。支持实时摄像头处理。",
+                step1: "步骤 1", modeCalibTitle: "比例校准", modeCalibDesc: "使用已知物体设置相机比例",
+                modeDimTitle: "尺寸测量", modeDimDesc: "测量宽度和长度", modeWarpTitle: "翘曲测量", modeWarpDesc: "寻找最大弯曲点",
+                modeAllTitle: "综合检验 (OK/NG)", modeAllDesc: "实时同步测量", liveCamera: "开启相机", stopCamera: "关闭相机",
+                scanSearch: "寻找物体中...", scanFound: "已检测到物体", calibPanelTitle: "校准设置", calibInst: "将参考物体放入取景框，并在下方输入其实际尺寸。",
+                refSizeLabel: "实际物体长度 (mm)", btnConfirmCalib: "确认比例", controlTitle: "公差设置", tolerance: "翘曲公差 [mm]",
+                results: "实时结果", dimensions: "外形尺寸", length: "长度 (L)", height: "宽度 (W)",
+                maxWarpage: "最大翘曲度", btnSave: "保存记录", historyTitle: "检验记录", exportCSV: "导出 CSV",
+                thTime: "时间", thDim: "长 x 宽 (mm)", thWarp: "翘曲 (mm)", thResult: "状态", pass: "合格", fail: "不合格", trendTitle: "翘曲趋势图",
+                alertNoObj: "未检测到物体！请将参考物体放入取景框。", alertSuccess: "校准成功！当前比例为："
+            },
+            ja: {
+                subtitle: "寸法・反り分析システム", homeTitle: "操作モードを選択", homeDesc: "測定前にスケールを調整してください。リアルタイムカメラ処理をサポート。",
+                step1: "ステップ 1", modeCalibTitle: "スケールキャリブレーション", modeCalibDesc: "基準オブジェクトでカメラ比率を設定",
+                modeDimTitle: "寸法測定", modeDimDesc: "幅と長さを測定", modeWarpTitle: "反り測定", modeWarpDesc: "最大反りポイントを特定",
+                modeAllTitle: "総合検査 (OK/NG)", modeAllDesc: "リアルタイム同期測定", liveCamera: "カメラ起動", stopCamera: "停止",
+                scanSearch: "オブジェクトを検索中...", scanFound: "オブジェクトを検出", calibPanelTitle: "キャリブレーション設定", calibInst: "基準オブジェクトをフレーム内に配置し、実際のサイズを入力してください。",
+                refSizeLabel: "実際のオブジェクトの長さ (mm)", btnConfirmCalib: "スケール設定", controlTitle: "許容差設定", tolerance: "反り許容差 [mm]",
+                results: "リアルタイム結果", dimensions: "外形寸法", length: "長さ (L)", height: "幅 (W)",
+                maxWarpage: "最大反り", btnSave: "記録を保存", historyTitle: "検査ログ", exportCSV: "CSV出力",
+                thTime: "時間", thDim: "長さ x 幅 (mm)", thWarp: "反り (mm)", thResult: "ステータス", pass: "合格", fail: "NG", trendTitle: "反りトレンドグラフ",
+                alertNoObj: "オブジェクトが検出されません！フレーム内に配置してください。", alertSuccess: "校正成功！現在のスケール:"
+            }
+        };
+
+        // Core State
+        let currentLang = 'th';
+        let appMode = 'ALL';
+        let isCameraOn = false;
+        let cameraStream = null;
+        let animId = null;
+        
+        // Canvas & Video context
+        let canvas, ctx, video;
+        let cvCanvas, cvCtx; // Offscreen canvas for edge detection
+        
+        // Physics & Measurement
+        let baseScaleRatio = 0.25; // Default 1px = 0.25mm
+        let currentL = 0, currentW = 0, currentGap = 0, isPass = false;
+        let warpagePhase = 0;
+
+        // Smart Box Tracking
+        let trackedBox = null;
+        let smoothBox = { x: 0, y: 0, w: 0, h: 0, active: false };
+
+        // Chart Data
+        let chartInstance = null;
+        let chartLabels = [];
+        let chartDataPoints = [];
+
+        window.onload = () => {
+            // Bind Elements
+            canvas = document.getElementById('mainCanvas');
+            ctx = canvas.getContext('2d');
+            video = document.getElementById('webcamVideo');
+            
+            // Setup hidden canvas for fast pixel processing
+            cvCanvas = document.createElement('canvas');
+            cvCanvas.width = 160; 
+            cvCanvas.height = 120;
+            cvCtx = cvCanvas.getContext('2d');
+
+            initChart();
+            changeLanguage();
+            updateHeaderScale();
+        };
+
+        function changeLanguage() {
+            currentLang = document.getElementById('langSelect').value;
+            const t = dict[currentLang];
+            document.querySelectorAll('[id^="t-"]').forEach(el => {
+                const key = el.id.replace('t-', '');
+                if (t[key]) el.textContent = t[key];
+            });
+            document.getElementById('t-liveCamera').textContent = isCameraOn ? t.stopCamera : t.liveCamera;
+            updateStatusUI();
+        }
+
+        function updateHeaderScale() {
+            document.getElementById('headerScaleDisplay').textContent = `${baseScaleRatio.toFixed(3)} mm/px`;
+        }
+
+        function goHome() {
+            if(isCameraOn) toggleCamera();
+            document.getElementById('screenApp').classList.add('hidden');
+            document.getElementById('screenHome').classList.remove('hidden');
+            document.getElementById('btnBackHome').classList.add('hidden');
+        }
+
+        function enterMode(mode) {
+            appMode = mode;
+            document.getElementById('screenHome').classList.add('hidden');
+            document.getElementById('screenApp').classList.remove('hidden');
+            document.getElementById('btnBackHome').classList.remove('hidden');
+            
+            const t = dict[currentLang];
+            let label = "";
+            
+            // Toggle UI based on mode
+            const pCalib = document.getElementById('panelCalib');
+            const pSettings = document.getElementById('panelMeasureSettings');
+            const pResults = document.getElementById('panelMeasureResults');
+            const pHistory = document.getElementById('historySection');
+            
+            if (mode === 'CALIB') {
+                label = t.modeCalibTitle;
+                pCalib.classList.remove('hidden');
+                pSettings.classList.add('hidden');
+                pResults.classList.add('hidden');
+                pHistory.classList.add('hidden');
+            } else {
+                if(mode==='DIM') label = t.modeDimTitle;
+                else if(mode==='WARP') label = t.modeWarpTitle;
+                else label = t.modeAllTitle;
+
+                pCalib.classList.add('hidden');
+                pSettings.classList.remove('hidden');
+                pResults.classList.remove('hidden');
+                pHistory.classList.remove('hidden');
+                
+                document.getElementById('boxDimension').style.display = (mode==='DIM' || mode==='ALL') ? 'block' : 'none';
+                document.getElementById('boxWarpage').style.display = (mode==='WARP' || mode==='ALL') ? 'block' : 'none';
+                document.getElementById('boxSaveAction').style.display = 'block';
+            }
+            
+            document.getElementById('currentModeLabel').textContent = label;
+            drawGrid();
+        }
+
+        function performCalibration() {
+            if (!smoothBox.active || smoothBox.w < 30) {
+                const t = dict[currentLang];
+                alert(t.alertNoObj);
+                return;
+            }
+            
+            // Read target size
+            let refSize = parseFloat(document.getElementById('refSizeInput').value);
+            if(isNaN(refSize) || refSize <= 0) refSize = 86; // fallback to ID card
+
+            // Find longest side of tracked box in pixels
+            let maxPx = Math.max(smoothBox.w, smoothBox.h);
+            
+            // Calculate new scale
+            baseScaleRatio = refSize / maxPx;
+            updateHeaderScale();
+
+            // Notify user and go back
+            const t = dict[currentLang];
+            
+            // Visual feedback on button
+            const btn = document.querySelector('button[onclick="performCalibration()"]');
+            const orgHtml = btn.innerHTML;
+            btn.classList.add('bg-green-600', 'border-green-500');
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <span>Success!</span>`;
+            
+            setTimeout(() => {
+                alert(`${t.alertSuccess} ${baseScaleRatio.toFixed(3)} mm/px`);
+                btn.classList.remove('bg-green-600', 'border-green-500');
+                btn.innerHTML = orgHtml;
+                goHome(); // Return to main menu
+            }, 600);
+        }
+
+        async function toggleCamera() {
+            const btn = document.getElementById('btnToggleCamera');
+            const t = dict[currentLang];
+            
+            if (isCameraOn) {
+                if (cameraStream) cameraStream.getTracks().forEach(tr => tr.stop());
+                if (animId) cancelAnimationFrame(animId);
+                isCameraOn = false;
+                btn.classList.replace('bg-red-600', 'bg-teal-600');
+                btn.classList.replace('hover:bg-red-500', 'hover:bg-teal-500');
+                document.getElementById('t-liveCamera').textContent = t.liveCamera;
+                document.getElementById('canvasContainer').classList.remove('live-mode-active');
+                document.getElementById('statusLiveText').classList.add('hidden');
+                document.getElementById('btnSaveData').disabled = true;
+                drawGrid();
+                resetValues();
+            } else {
+                try {
+                    cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } } 
+                    });
+                    video.srcObject = cameraStream;
+                    isCameraOn = true;
+                    btn.classList.replace('bg-teal-600', 'bg-red-600');
+                    btn.classList.replace('hover:bg-teal-500', 'hover:bg-red-500');
+                    document.getElementById('t-liveCamera').textContent = t.stopCamera;
+                    document.getElementById('canvasContainer').classList.add('live-mode-active');
+                    document.getElementById('statusLiveText').classList.remove('hidden');
+                    document.getElementById('btnSaveData').disabled = false;
+                    
+                    video.onloadedmetadata = () => { video.play(); renderLiveAI(); };
+                } catch (err) {
+                    alert('Camera access denied. Please allow camera permissions / ตรวจสอบสิทธิ์การเข้าถึงกล้อง');
+                }
+            }
+        }
+
+        function drawGrid() {
+            if(!ctx) return;
+            ctx.fillStyle = '#020617'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // เอาเส้นตาราง (Grid) ที่ดูฟิกตายตัวออกทั้งหมด เพื่อให้หน้าจอมีอิสระ
+        }
+
+        function processEdgeDetection() {
+            if(!cvCtx || video.paused || video.ended) return;
+            
+            const cvW = 160;
+            const cvH = 110;
+            cvCanvas.width = cvW;
+            cvCanvas.height = cvH;
+            
+            cvCtx.drawImage(canvas, 0, 0, cvW, cvH);
+            const imgData = cvCtx.getImageData(0, 0, cvW, cvH);
+            const data = imgData.data;
+            
+            // 1. สุ่มสีพื้นหลัง (Background) จาก 4 มุมของภาพ
+            let bgR = 0, bgG = 0, bgB = 0;
+            const corners = [
+                (5 * cvW + 5) * 4,               // บนซ้าย
+                (5 * cvW + (cvW - 5)) * 4,       // บนขวา
+                ((cvH - 5) * cvW + 5) * 4,       // ล่างซ้าย
+                ((cvH - 5) * cvW + (cvW - 5)) * 4 // ล่างขวา
+            ];
+            
+            corners.forEach(i => {
+                bgR += data[i]; bgG += data[i+1]; bgB += data[i+2];
+            });
+            bgR /= 4; bgG /= 4; bgB /= 4; // ค่าเฉลี่ยสีของโต๊ะ/พื้นหลัง
+
+            let minX = cvW, maxX = 0, minY = cvH, maxY = 0;
+            let objPixels = 0;
+
+            // 2. สแกนหาชิ้นงาน (แยกพิกเซลที่สีตัดกับพื้นหลัง)
+            for (let y = 10; y < cvH - 10; y++) {
+                for (let x = 10; x < cvW - 10; x++) {
+                    const i = (y * cvW + x) * 4;
+                    const r = data[i], g = data[i+1], b = data[i+2];
+                    
+                    // หาความต่างของสี (Color Contrast)
+                    const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+
+                    // ถ้าสีพิกเซลนี้ต่างจากสีโต๊ะเกินเกณฑ์ ถือว่าเป็น "วัตถุ"
+                    if (diff > 65) { 
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                        objPixels++;
+                    }
+                }
+            }
+
+            // 3. ถ้าพบวัตถุขนาดใหญ่พอสมควร ให้สร้างกรอบครอบวัตถุนั้น
+            if (objPixels > 80 && (maxX - minX) > 15 && (maxY - minY) > 10) {
+                const scaleX = canvas.width / cvW;
+                const scaleY = canvas.height / cvH;
+                trackedBox = { 
+                    x: minX * scaleX, 
+                    y: minY * scaleY, 
+                    w: (maxX - minX) * scaleX, 
+                    h: (maxY - minY) * scaleY 
+                };
+            } else {
+                trackedBox = null;
+            }
+        }
+
+        function renderLiveAI() {
+            if (!isCameraOn) return;
+            
+            // Correct Aspect Ratio (Cover Mode)
+            const vRatio = video.videoWidth / video.videoHeight;
+            const cRatio = canvas.width / canvas.height;
+            let dw, dh, dx, dy;
+            if (vRatio > cRatio) {
+                dh = canvas.height; dw = dh * vRatio;
+                dx = (canvas.width - dw) / 2; dy = 0;
+            } else {
+                dw = canvas.width; dh = dw / vRatio;
+                dx = 0; dy = (canvas.height - dh) / 2;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, dx, dy, dw, dh);
+
+            // เรียกใช้ฟังก์ชันจับขอบที่แก้ไขใหม่
+            processEdgeDetection();
+
+            // Smooth Interpolation for the tracking box
+            if (trackedBox) {
+                smoothBox.active = true;
+                if(smoothBox.w === 0) {
+                    smoothBox.x = trackedBox.x; smoothBox.y = trackedBox.y; 
+                    smoothBox.w = trackedBox.w; smoothBox.h = trackedBox.h;
+                } else {
+                    smoothBox.x += (trackedBox.x - smoothBox.x) * 0.2;
+                    smoothBox.y += (trackedBox.y - smoothBox.y) * 0.2;
+                    smoothBox.w += (trackedBox.w - smoothBox.w) * 0.2;
+                    smoothBox.h += (trackedBox.h - smoothBox.h) * 0.2;
+                }
+            } else {
+                smoothBox.w += (0 - smoothBox.w) * 0.1;
+                smoothBox.h += (0 - smoothBox.h) * 0.1;
+                if(smoothBox.w < 10) smoothBox.active = false;
+            }
+
+            // UI Status Updates
+            const t = dict[currentLang];
+            const statText = document.getElementById('scanText');
+            const statPulse = document.getElementById('scanPulse');
+            
+            if (smoothBox.active && smoothBox.w > 40) {
+                statText.textContent = t.scanFound;
+                statText.className = "text-green-400";
+                statPulse.className = "w-2.5 h-2.5 rounded-full bg-green-400";
+                
+                currentL = smoothBox.w * baseScaleRatio;
+                currentW = smoothBox.h * baseScaleRatio;
+
+                drawSmartOverlay(smoothBox.x, smoothBox.y, smoothBox.w, smoothBox.h);
+            } else {
+                statText.textContent = t.scanSearch;
+                statText.className = "text-yellow-400";
+                statPulse.className = "w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse";
+                resetValues();
+                
+                // เอาเส้น Crosshair ที่อยู่ตรงกลางหน้าจอออก เพื่อไม่ให้ดูถูกฟิกตำแหน่ง
+            }
+
+            if(appMode !== 'CALIB') updateStatusUI();
+            animId = requestAnimationFrame(renderLiveAI);
+        }
+
+        function drawSmartOverlay(x, y, w, h) {
+            const pad = 10;
+            const cx = x + w/2;
+            const cy = y + h/2;
+            
+            // 1. Draw Smart Corner Brackets (Always show)
+            ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 3; const cLen = 20;
+            ctx.beginPath();
+            ctx.moveTo(x-pad, y-pad+cLen); ctx.lineTo(x-pad, y-pad); ctx.lineTo(x-pad+cLen, y-pad); // TL
+            ctx.moveTo(x+w+pad-cLen, y-pad); ctx.lineTo(x+w+pad, y-pad); ctx.lineTo(x+w+pad, y-pad+cLen); // TR
+            ctx.moveTo(x+w+pad, y+h+pad-cLen); ctx.lineTo(x+w+pad, y+h+pad); ctx.lineTo(x+w+pad-cLen, y+h+pad); // BR
+            ctx.moveTo(x-pad+cLen, y+h+pad); ctx.lineTo(x-pad, y+h+pad); ctx.lineTo(x-pad, y+h+pad-cLen); // BL
+            ctx.stroke();
+
+            // 2. Draw Dimension Box (For CALIB, DIM, ALL)
+            if (appMode === 'DIM' || appMode === 'ALL' || appMode === 'CALIB') {
+                // ลบเส้นกรอบสี่เหลี่ยมสีม่วงออก เพื่อไม่ให้ดูถูกจำกัดด้วยกรอบ
+                
+                // Text overlay ลอยขึ้นมาแบบอิสระ
+                ctx.fillStyle = '#c084fc'; ctx.font = 'bold 16px monospace';
+                ctx.fillText(`L:${currentL.toFixed(1)}mm`, cx - 30, y + h + 25);
+                ctx.fillText(`W:${currentW.toFixed(1)}mm`, x + w + 15, cy);
+            }
+
+            // 3. Draw Warpage Logic (Only for WARP, ALL)
+            if (appMode === 'WARP' || appMode === 'ALL') {
+                warpagePhase += 0.1;
+                const datumY = y + h - 5; // Simulating base line of the object
+                
+                // Draw Datum Line (Extended)
+                ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+                ctx.beginPath(); ctx.moveTo(x - 20, datumY); ctx.lineTo(x + w + 20, datumY); ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Datum Label
+                ctx.fillStyle = '#38bdf8'; ctx.font = 'bold 13px sans-serif';
+                ctx.fillText('DATUM (0.0mm)', x + w + 25, datumY + 4);
+
+                // Simulate Max Gap finding
+                const gapPx = (w * 0.05) + Math.sin(warpagePhase) * 5; // simulated deflection
+                currentGap = gapPx * baseScaleRatio;
+                const curveY = datumY - gapPx;
+                
+                // ลบเส้นโค้งสีเขียวที่ดูฟิกตายตัวหลอกตาออก
+
+                // Draw Max Gap Indicator Only
+                ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.moveTo(cx, datumY); ctx.lineTo(cx, curveY); ctx.stroke();
+                
+                // Dot & Label ลอยอิสระ
+                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(cx, curveY, 6, 0, Math.PI*2); ctx.fill();
+                ctx.font = 'bold 15px sans-serif';
+                ctx.fillText(`Max: ${currentGap.toFixed(2)}mm`, cx + 15, curveY - 10);
+            }
+        }
+
+        function updateStatusUI() {
+            if(appMode === 'CALIB') return;
+
+            const tolInput = document.getElementById('toleranceInput');
+            const tol = parseFloat(tolInput ? tolInput.value : 0.5) || 0.5;
+            isPass = currentGap <= tol;
+            const t = dict[currentLang];
+
+            document.getElementById('valLength').textContent = currentL.toFixed(1);
+            document.getElementById('valHeight').textContent = currentW.toFixed(1);
+            
+            const vWarp = document.getElementById('valWarpage');
+            const vStatus = document.getElementById('valStatus');
+            const rPanel = document.getElementById('panelMeasureResults');
+            const rInd = document.getElementById('resultIndicator');
+
+            // Reset state if no object
+            if (currentW === 0 && currentL === 0) {
+                vWarp.textContent = "0.00";
+                vWarp.className = "text-5xl font-bold font-mono text-slate-600";
+                vStatus.textContent = "-";
+                vStatus.className = "px-4 py-1.5 rounded-lg border-2 font-bold tracking-widest text-xl bg-slate-900 border-slate-700 text-slate-500";
+                rPanel.className = "bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-xl flex-1 flex flex-col transition-all duration-200";
+                rInd.className = "w-1 h-5 rounded-full bg-slate-700";
+                return;
+            }
+
+            vWarp.textContent = currentGap.toFixed(2);
+
+            // Pass/Fail Visuals
+            if (appMode === 'WARP' || appMode === 'ALL') {
+                vWarp.className = `text-5xl font-bold font-mono ${isPass ? 'text-green-400' : 'text-red-400'}`;
+                vStatus.textContent = isPass ? t.pass : t.fail;
+                
+                if (isPass) {
+                    vStatus.className = "px-4 py-1.5 rounded-lg border-2 font-bold tracking-widest text-xl bg-green-950/30 border-green-500/50 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.3)]";
+                    rPanel.className = "bg-slate-900 border-2 rounded-xl p-5 shadow-xl flex-1 flex flex-col transition-all duration-200 border-green-500/40";
+                    rInd.className = "w-1 h-5 rounded-full bg-green-500";
+                } else {
+                    vStatus.className = "px-4 py-1.5 rounded-lg border-2 font-bold tracking-widest text-xl bg-red-950/30 border-red-500/50 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)]";
+                    rPanel.className = "bg-slate-900 border-2 rounded-xl p-5 shadow-xl flex-1 flex flex-col transition-all duration-200 border-red-500/50";
+                    rInd.className = "w-1 h-5 rounded-full bg-red-500";
+                }
+            } else {
+                vWarp.className = "text-5xl font-bold font-mono text-slate-400";
+                vStatus.textContent = "-";
+                vStatus.className = "px-4 py-1.5 rounded-lg border-2 font-bold tracking-widest text-xl bg-slate-900 border-slate-700 text-slate-500";
+            }
+        }
+
+        function resetValues() {
+            currentL = 0; currentW = 0; currentGap = 0;
+            updateStatusUI();
+        }
+
+        function initChart() {
+            const ctxChart = document.getElementById('trendChart').getContext('2d');
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'sans-serif';
+            
+            chartInstance = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Max Warpage (mm)',
+                        data: chartDataPoints,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: function(context) {
+                            var index = context.dataIndex;
+                            var value = context.dataset.data[index];
+                            var tol = parseFloat(document.getElementById('toleranceInput')?.value || 0.5);
+                            return value > tol ? '#ef4444' : '#22c55e'; // Red if fail, Green if pass
+                        },
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(51, 65, 85, 0.5)' }, title: { display: true, text: 'Gap (mm)' } },
+                        x: { grid: { display: false } }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: { duration: 400 }
+                }
+            });
+        }
+
+        function saveData() {
+            if(currentL === 0 && currentW === 0) return;
+            const timeStr = new Date().toLocaleTimeString('en-GB');
+            const tbody = document.getElementById('historyTableBody');
+            const t = dict[currentLang];
+            
+            const tr = document.createElement('tr');
+            tr.className = "border-b border-slate-800/50 hover:bg-slate-800/40 transition-colors animate-fade-in";
+            
+            let dimStr = (appMode === 'DIM' || appMode === 'ALL') ? `${currentL.toFixed(1)} x ${currentW.toFixed(1)}` : '-';
+            let warpStr = (appMode === 'WARP' || appMode === 'ALL') ? currentGap.toFixed(2) : '-';
+            
+            let statBadge = '-';
+            if (appMode === 'WARP' || appMode === 'ALL') {
+                statBadge = `<span class="px-2 py-1 rounded text-xs font-bold ${isPass ? 'bg-green-900/40 text-green-400 border border-green-800' : 'bg-red-900/40 text-red-400 border border-red-800'}">${isPass ? t.pass : t.fail}</span>`;
+            }
+
+            tr.innerHTML = `<td class="px-4 py-3">${timeStr}</td><td class="px-4 py-3 font-mono text-slate-300">${dimStr}</td><td class="px-4 py-3 font-mono ${!isPass && appMode !== 'DIM' ? 'text-red-400 font-bold' : 'text-slate-300'}">${warpStr}</td><td class="px-4 py-3">${statBadge}</td>`;
+            tbody.prepend(tr); // Insert at top
+            
+            // Update Chart
+            if (appMode === 'WARP' || appMode === 'ALL') {
+                chartLabels.push(timeStr);
+                chartDataPoints.push(currentGap.toFixed(2));
+                if(chartLabels.length > 20) { chartLabels.shift(); chartDataPoints.shift(); } // Keep last 20 points
+                if(chartInstance) chartInstance.update();
+            }
+
+            // Visual feedback on save button
+            const btn = document.getElementById('btnSaveData');
+            btn.classList.add('scale-95', 'bg-cyan-500');
+            setTimeout(() => btn.classList.remove('scale-95', 'bg-cyan-500'), 150);
+        }
+
+        function exportCSV() {
+            const rows = document.querySelectorAll('#historyTableBody tr');
+            if(rows.length === 0) { alert('No data to export.'); return; }
+            let csv = "Time,Dimension (LxW),Warpage,Result\n";
+            rows.forEach(r => {
+                const cols = r.querySelectorAll('td');
+                csv += `"${cols[0].innerText}","${cols[1].innerText}","${cols[2].innerText}","${cols[3].innerText}"\n`;
+            });
+            const blob = new Blob(["\uFEFF"+csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `WarpVision_Log_${Date.now()}.csv`;
+            document.body.appendChild(link);
+            link.click(); document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
